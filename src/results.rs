@@ -30,6 +30,9 @@ impl Results {
 
 impl Display for Results {
     fn fmt(&self, fmter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        fmter.write_str(&format!("Success: {}, Fail: {}, Error: {}", self.success.len(), self.fail.len(), self.error.len()))
+        fmter.write_str(&format!("Success: {}, Fail: {}, Error: {}",
+                                self.success.len(),
+                                self.fail.len(),
+                                self.error.len()))
     }
 }
