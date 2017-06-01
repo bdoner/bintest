@@ -5,6 +5,7 @@ extern crate term;
 mod args;
 mod test;
 mod filesystem;
+mod results;
 
 use std::process::exit;
 use std::fs::read_dir;
@@ -18,12 +19,17 @@ fn main() {
 
     println!("Running {} tests...", tests.len());
 
+    let mut results = results::Results::new();
+
     for test in tests {
         if !quiet {
             print!("Test {} ... ", test.name());
             std::io::stdout().flush().unwrap();
         }
+
         let ans = test.run();
+        results.register(&ans, &test);
+
         if quiet {
             match ans {
                 Ok(true) => print!("."),
@@ -39,6 +45,12 @@ fn main() {
             }
         }
     }
+
+    if quiet {
+        println!("");
+    }
+
+    println!("Results: {}", results);
 }
 
 fn make_tests(args: &clap::ArgMatches, quiet: bool) -> Vec<Test> {
