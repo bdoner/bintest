@@ -1,96 +1,72 @@
-use std::{fs, io};
 use std::process::Command;
-use std::path::Path;
+use std::path::PathBuf;
 use std::io::Read;
+use std::{io, fs};
 
-pub struct Options<'a> {
-    pub source: &'a str,
-    pub temp: &'a str,
-    pub expected: &'a str,
-    pub command: &'a str,
+use filesystem;
+
+pub struct Test {
+    name: String,
+    source: PathBuf,
+    temp: PathBuf,
+    expected: PathBuf,
+    cmd: String,
+    quiet: bool,
 }
 
-pub fn run_test(opts: &Options, directory: &Path) -> Result<bool, io::Error> {
-    let source = &directory.join(opts.source);
-    let temp = &directory.join(opts.temp);
-    let expected = &directory.join(opts.expected);
-    let command = &directory.join(opts.command);
+impl Test {
+    pub fn new(source: &str,
+               temp: &str,
+               expected: &str,
+               command: &str,
+               directory: &::std::fs::DirEntry,
+               quiet: bool)
+               -> Test {
+        let name = directory.file_name();
+        let directory = directory.path().to_path_buf();
+        let command = directory.join(command);
+        let cmd = fs::File::open(command)
+            .and_then(|mut f| {
+                          let mut cmd_str = String::new();
+                          f.read_to_string(&mut cmd_str).map(move |_| cmd_str)
+                      })
+            .unwrap_or_else(|_| "cargo run -q".to_owned());
 
-    // Prepare temp
-    let _ = fs::remove_dir_all(temp);
-    recursive_copy(source, temp)?;
 
-    // Run in temp
-    let cmd = fs::File::open(command)
-        .and_then(|mut f| {
-                      let mut cmd_str = String::new();
-                      f.read_to_string(&mut cmd_str).map(move |_| cmd_str)
-                  })
-        .unwrap_or_else(|_| "cargo run -q".to_owned());
-    Command::new("sh")
-        .arg("-c")
-        .arg(&cmd)
-        .current_dir(temp)
-        .status()?;
-
-    // Compare answer
-    let ans = compare_dirs(temp, expected).unwrap_or(false);
-    if ans {
-        fs::remove_dir_all(temp)?;
+        Test {
+            name: name.to_string_lossy().into_owned(),
+            source: directory.join(source),
+            temp: directory.join(temp),
+            expected: directory.join(expected),
+            cmd: cmd,
+            quiet: quiet,
+        }
     }
-    Ok(ans)
-}
 
-fn recursive_copy(src: &Path, dst: &Path) -> Result<(), io::Error> {
-    fs::create_dir_all(dst)?;
-    for file in fs::read_dir(src)? {
-        let file = file?;
-        let dir = file.file_type()?.is_dir();
-        let path = file.path();
-        let path = path.file_name().unwrap();
+    pub fn run(&self) -> Result<bool, io::Error> {
+        // Prepare temp
+        let _ = fs::remove_dir_all(&self.temp);
+        filesystem::recursive_copy(&self.source, &self.temp)?;
 
-        let src = &src.join(path);
-        let dst = &dst.join(path);
-
-        if dir {
-            recursive_copy(src, dst)?;
+        // Run in temp
+        let mut cmd = Command::new("sh");
+        cmd.arg("-c").arg(&self.cmd).current_dir(&self.temp);
+        // Suppress output if quiet
+        if self.quiet {
+            cmd.output()?;
         } else {
-            fs::copy(src, dst)?;
+            cmd.status()?;
         }
-    }
-    Ok(())
-}
 
-fn compare_dirs(src: &Path, dst: &Path) -> Result<bool, io::Error> {
-    for file in fs::read_dir(src)? {
-        let file = file?;
-        let dir = file.file_type()?.is_dir();
-        let path = file.path();
-        let path = path.file_name().unwrap();
-
-        let src = &src.join(path);
-        let dst = &dst.join(path);
-
-        if dir {
-            if !compare_dirs(src, dst)? {
-                return Ok(false);
-            }
-        } else if !compare_files(src, dst)? {
-            return Ok(false);
+        // Compare answer
+        let ans = filesystem::compare_dirs(&self.temp, &self.expected).unwrap_or(false);
+        if ans {
+            fs::remove_dir_all(&self.temp)?;
         }
+        Ok(ans)
     }
 
-    Ok(true)
-}
-
-fn compare_files(one: &Path, two: &Path) -> Result<bool, io::Error> {
-    let mut buf_one = String::new();
-    fs::File::open(one)?.read_to_string(&mut buf_one)?;
-
-    let mut buf_two = String::new();
-    fs::File::open(two)?.read_to_string(&mut buf_two)?;
-
-    let ans = buf_one == buf_two;
-
-    Ok(ans)
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }

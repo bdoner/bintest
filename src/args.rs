@@ -41,5 +41,9 @@ pub fn get_args() -> clap::ArgMatches<'static> {
                  .default_value("command.sh")
                  .help("File inside test containing command to be ran.\
                    If file doesn't exist, will run 'cargo run -q'"))
+        .arg(clap::Arg::with_name("quiet")
+                 .short("q")
+                 .long("quiet")
+                 .help("Quiet - output one character per test."))
         .get_matches()
 }
