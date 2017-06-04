@@ -1,6 +1,6 @@
 #[macro_use]
 extern crate clap;
-extern crate term;
+extern crate ansi_term;
 
 mod args;
 mod test;
@@ -10,6 +10,7 @@ mod results;
 use std::process::exit;
 use std::fs::read_dir;
 use std::io::Write;
+use ansi_term::Colour::{Red,Yellow,Green};
 use test::Test;
 
 fn main() {
@@ -33,15 +34,15 @@ fn main() {
         if quiet {
             match ans {
                 Ok(true) => print!("."),
-                Ok(false) => print!("F"),
-                Err(_) => print!("E"),
+                Ok(false) => print!("{}", Red.paint("F")),
+                Err(_) => print!("{}", Yellow.paint("E")),
             }
             std::io::stdout().flush().unwrap();
         } else {
             match ans {
-                Ok(true) => println!("ok"),
-                Ok(false) => println!("FAIL"),
-                Err(e) => println!("ERROR: {}", e),
+                Ok(true) => println!("{}", Green.paint("ok")),
+                Ok(false) => println!("{}", Red.paint("FAIL")),
+                Err(e) => println!("{} {}", Yellow.paint("ERROR:"), e),
             }
         }
     }
