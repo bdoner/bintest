@@ -45,5 +45,9 @@ pub fn get_args() -> clap::ArgMatches<'static> {
                  .short("q")
                  .long("quiet")
                  .help("Quiet - output one character per test."))
+        .arg(clap::Arg::with_name("verbose")
+                 .short("v")
+                 .long("verbose")
+                 .help("Verbose - don't capture output."))
         .get_matches()
 }

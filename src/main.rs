@@ -15,7 +15,7 @@ use test::Test;
 fn main() {
     let args = args::get_args();
     let quiet = args.occurrences_of("quiet") > 0;
-    let tests = make_tests(&args, quiet);
+    let tests = make_tests(&args);
 
     println!("Running {} tests...", tests.len());
 
@@ -53,13 +53,14 @@ fn main() {
     println!("Results: {}", results);
 }
 
-fn make_tests(args: &clap::ArgMatches, quiet: bool) -> Vec<Test> {
+fn make_tests(args: &clap::ArgMatches) -> Vec<Test> {
     let test_dir = args.value_of("directory").unwrap();
 
     let source = args.value_of("source").unwrap();
     let temp = args.value_of("temp").unwrap();
     let expected = args.value_of("expected").unwrap();
     let command = args.value_of("command").unwrap();
+    let verbose = args.occurrences_of("verbose") > 0;
 
     let tests_dir = match read_dir(test_dir) {
         Ok(ans) => ans,
@@ -74,7 +75,7 @@ fn make_tests(args: &clap::ArgMatches, quiet: bool) -> Vec<Test> {
     for directory in tests_dir {
         let directory = directory.unwrap();
         if directory.file_type().unwrap().is_dir() {
-            tests.push(Test::new(source, temp, expected, command, &directory, quiet));
+            tests.push(Test::new(source, temp, expected, command, &directory, !verbose));
         }
     }
 
