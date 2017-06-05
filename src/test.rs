@@ -17,12 +17,6 @@ pub struct Test {
     clean_failed: bool,
 }
 
-pub enum TestResult {
-    Success,
-    Ignored,
-    Fail,
-}
-
 impl Test {
     pub fn new(directory: &::std::fs::DirEntry, args: &Arguments) -> Test {
         let name = directory.file_name();
@@ -47,18 +41,24 @@ impl Test {
         }
     }
 
-    pub fn run(&self) -> Result<TestResult, io::Error> {
+    pub fn run(&self) -> TestResult {
         let ans = self.real_run();
         if self.clean_failed {
             match ans {
                 Ok(TestResult::Fail) |
                 Err(_) => {
-                    fs::remove_dir_all(&self.temp)?;
+                    let err = fs::remove_dir_all(&self.temp);
+                    if err.is_err() {
+                        return TestResult::Error(None);
+                    }
                 }
                 _ => {}
             }
         }
-        ans
+        match ans {
+            Ok(res) => res,
+            Err(e) => TestResult::Error(Some(e)),
+        }
     }
 
     fn real_run(&self) -> Result<TestResult, io::Error> {
@@ -92,5 +92,47 @@ impl Test {
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+}
+
+pub enum TestResult {
+    Success,
+    Ignored,
+    Fail,
+    Error(Option<io::Error>),
+}
+
+impl From<Result<TestResult, io::Error>> for TestResult {
+    fn from(other: Result<TestResult, io::Error>) -> TestResult {
+        match other {
+            Ok(result) => result,
+            Err(err) => TestResult::Error(Some(err))
+        }
+    }
+}
+
+impl ::std::cmp::Eq for TestResult {
+}
+
+impl ::std::cmp::PartialEq for TestResult {
+    fn eq(&self, other: &TestResult) -> bool {
+        match (self, other) {
+            (&TestResult::Success, &TestResult::Success) |
+            (&TestResult::Fail, &TestResult::Fail) |
+            (&TestResult::Ignored, &TestResult::Ignored) |
+            (&TestResult::Error(_), &TestResult::Error(_)) => true,
+            _ => false,
+        }
+    }
+}
+
+impl ::std::hash::Hash for TestResult {
+    fn hash<H: ::std::hash::Hasher>(&self, state: &mut H) {
+        match *self {
+            TestResult::Success => 1,
+            TestResult::Fail => 2,
+            TestResult::Ignored => 3,
+            TestResult::Error(_) => 4,
+        }.hash(state);
     }
 }

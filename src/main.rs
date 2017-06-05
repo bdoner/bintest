@@ -32,18 +32,23 @@ fn main() {
 
         if args.quiet {
             match ans {
-                Ok(TestResult::Success) => print!("."),
-                Ok(TestResult::Fail) => print!("{}", Red.paint("F")),
-                Ok(TestResult::Ignored) => print!("{}", Blue.paint("I")),
-                Err(_) => print!("{}", Yellow.paint("E")),
+                TestResult::Success => print!("."),
+                TestResult::Fail => print!("{}", Red.paint("F")),
+                TestResult::Ignored => print!("{}", Blue.paint("I")),
+                TestResult::Error(_) => print!("{}", Yellow.paint("E")),
             }
             std::io::stdout().flush().unwrap();
         } else {
             match ans {
-                Ok(TestResult::Success) => println!("{}", Green.paint("ok")),
-                Ok(TestResult::Fail) => println!("{}", Red.paint("FAIL")),
-                Ok(TestResult::Ignored) => println!("{}", Blue.paint("ignored")),
-                Err(e) => println!("{} {}", Yellow.paint("ERROR:"), e),
+                TestResult::Success => println!("{}", Green.paint("ok")),
+                TestResult::Fail => println!("{}", Red.paint("FAIL")),
+                TestResult::Ignored => println!("{}", Blue.paint("ignored")),
+                TestResult::Error(err) => {
+                    match err {
+                        Some(e) => println!("{} {}", Yellow.paint("ERROR:"), e),
+                        None => println!("{}", Yellow.paint("ERROR")),
+                    }
+                }
             }
         }
     }

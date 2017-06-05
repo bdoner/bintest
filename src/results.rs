@@ -1,35 +1,28 @@
 use test::{Test, TestResult};
-use std::io;
 use std::fmt::Display;
 use std::fmt;
 use ansi_term::Colour::{Red, Yellow};
 use ansi_term;
+use std::collections::HashMap;
 
 pub struct Results {
-    success: Vec<String>,
-    fail: Vec<String>,
-    ignore: Vec<String>,
-    error: Vec<String>,
+    results: HashMap<TestResult, Vec<String>>,
 }
 
 impl Results {
     pub fn new() -> Results {
-        Results {
-            success: Vec::new(),
-            fail: Vec::new(),
-            ignore: Vec::new(),
-            error: Vec::new(),
-        }
+        let mut results = HashMap::new();
+        results.insert(TestResult::Success, Vec::new());
+        results.insert(TestResult::Fail, Vec::new());
+        results.insert(TestResult::Ignored, Vec::new());
+        results.insert(TestResult::Error(None), Vec::new());
+        Results { results: results }
     }
 
-    pub fn register(&mut self, ans: &Result<TestResult, io::Error>, test: &Test) {
+    pub fn register(&mut self, ans: &TestResult, test: &Test) {
         let name = test.name().to_owned();
-        match *ans {
-            Ok(TestResult::Success) => self.success.push(name),
-            Ok(TestResult::Fail) => self.fail.push(name),
-            Ok(TestResult::Ignored) => self.ignore.push(name),
-            Err(_) => self.error.push(name),
-        }
+        let vec = self.results.get_mut(ans).unwrap();
+        vec.push(name);
     }
 
     fn print_elements(fmter: &mut fmt::Formatter,
@@ -52,14 +45,22 @@ impl Results {
 
 impl Display for Results {
     fn fmt(&self, fmter: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        let success = &self.results[&TestResult::Success];
+        let fail = &self.results[&TestResult::Fail];
+        let error = &self.results[&TestResult::Error(None)];
+        let ignored = &self.results[&TestResult::Ignored];
+
         fmter
             .write_str(&format!("Success: {}, Fail: {}, Error: {}, Ignored: {}\n",
-                               self.success.len(),
-                               self.fail.len(),
-                               self.error.len(),
-                               self.ignore.len()))?;
-        Results::print_elements(fmter, &self.fail, "Failed", Red.normal())?;
-        Results::print_elements(fmter, &self.error, "Error", Yellow.normal())?;
+                               success.len(), fail.len(), error.len(), ignored.len()))?;
+        Results::print_elements(fmter,
+                                fail,
+                                "Failed",
+                                Red.normal())?;
+        Results::print_elements(fmter,
+                                error,
+                                "Error",
+                                Yellow.normal())?;
         Ok(())
     }
 }
