@@ -10,8 +10,8 @@ mod results;
 use std::process::exit;
 use std::fs::read_dir;
 use std::io::Write;
-use ansi_term::Colour::{Red,Yellow,Green};
-use test::Test;
+use ansi_term::Colour::{Red, Yellow, Green, Blue};
+use test::{Test, TestResult};
 
 fn main() {
     let args = args::get_args();
@@ -33,15 +33,17 @@ fn main() {
 
         if quiet {
             match ans {
-                Ok(true) => print!("."),
-                Ok(false) => print!("{}", Red.paint("F")),
+                Ok(TestResult::Success) => print!("."),
+                Ok(TestResult::Fail) => print!("{}", Red.paint("F")),
+                Ok(TestResult::Ignored) => print!("{}", Blue.paint("I")),
                 Err(_) => print!("{}", Yellow.paint("E")),
             }
             std::io::stdout().flush().unwrap();
         } else {
             match ans {
-                Ok(true) => println!("{}", Green.paint("ok")),
-                Ok(false) => println!("{}", Red.paint("FAIL")),
+                Ok(TestResult::Success) => println!("{}", Green.paint("ok")),
+                Ok(TestResult::Fail) => println!("{}", Red.paint("FAIL")),
+                Ok(TestResult::Ignored) => println!("{}", Blue.paint("ignored")),
                 Err(e) => println!("{} {}", Yellow.paint("ERROR:"), e),
             }
         }
@@ -62,6 +64,7 @@ fn make_tests(args: &clap::ArgMatches) -> Vec<Test> {
     let expected = args.value_of("expected").unwrap();
     let command = args.value_of("command").unwrap();
     let verbose = args.occurrences_of("verbose") > 0;
+    let ignore = args.occurrences_of("ignore") == 0;
 
     let tests_dir = match read_dir(test_dir) {
         Ok(ans) => ans,
@@ -76,7 +79,13 @@ fn make_tests(args: &clap::ArgMatches) -> Vec<Test> {
     for directory in tests_dir {
         let directory = directory.unwrap();
         if directory.file_type().unwrap().is_dir() {
-            tests.push(Test::new(source, temp, expected, command, &directory, !verbose));
+            tests.push(Test::new(source,
+                                 temp,
+                                 expected,
+                                 command,
+                                 &directory,
+                                 !verbose,
+                                 ignore));
         }
     }
 
