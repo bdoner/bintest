@@ -95,6 +95,6 @@ fn get_matches() -> clap::ArgMatches<'static> {
                  .short("f")
                  .long("clean-failed")
                  .help("By default, bintest will leave the temporary folder for failed/errored \
-                       tests. This will make it clean up the temporary folder if the test failed."))
+                       tests. This will make it clean up the temporary folder."))
         .get_matches()
 }

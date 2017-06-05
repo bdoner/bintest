@@ -48,6 +48,20 @@ impl Test {
     }
 
     pub fn run(&self) -> Result<TestResult, io::Error> {
+        let ans = self.real_run();
+        if self.clean_failed {
+            match ans {
+                Ok(TestResult::Fail) |
+                Err(_) => {
+                    fs::remove_dir_all(&self.temp)?;
+                }
+                _ => {}
+            }
+        }
+        ans
+    }
+
+    fn real_run(&self) -> Result<TestResult, io::Error> {
         if self.ignore && self.name.starts_with("ignore") {
             return Ok(TestResult::Ignored);
         }
@@ -68,15 +82,12 @@ impl Test {
 
         // Compare answer
         let ans = filesystem::compare_dirs(&self.temp, &self.expected).unwrap_or(false);
-        if ans {
-            fs::remove_dir_all(&self.temp)?;
-            Ok(TestResult::Success)
-        } else {
-            if self.clean_failed {
-                fs::remove_dir_all(&self.temp)?;
-            }
-            Ok(TestResult::Fail)
-        }
+        Ok(if ans {
+               fs::remove_dir_all(&self.temp)?;
+               TestResult::Success
+           } else {
+               TestResult::Fail
+           })
     }
 
     pub fn name(&self) -> &str {
