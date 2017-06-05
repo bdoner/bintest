@@ -4,6 +4,7 @@ use std::io::Read;
 use std::{io, fs};
 
 use filesystem;
+use args::Arguments;
 
 pub struct Test {
     name: String,
@@ -13,6 +14,7 @@ pub struct Test {
     cmd: String,
     quiet: bool,
     ignore: bool,
+    clean_failed: bool,
 }
 
 pub enum TestResult {
@@ -22,17 +24,10 @@ pub enum TestResult {
 }
 
 impl Test {
-    pub fn new(source: &str,
-               temp: &str,
-               expected: &str,
-               command: &str,
-               directory: &::std::fs::DirEntry,
-               quiet: bool,
-               ignore: bool)
-               -> Test {
+    pub fn new(directory: &::std::fs::DirEntry, args: &Arguments) -> Test {
         let name = directory.file_name();
         let directory = directory.path().to_path_buf();
-        let command = directory.join(command);
+        let command = directory.join(&args.command);
         let cmd = fs::File::open(command)
             .and_then(|mut f| {
                           let mut cmd_str = String::new();
@@ -40,15 +35,15 @@ impl Test {
                       })
             .unwrap_or_else(|_| "cargo run -q".to_owned());
 
-
         Test {
             name: name.to_string_lossy().into_owned(),
-            source: directory.join(source),
-            temp: directory.join(temp),
-            expected: directory.join(expected),
+            source: directory.join(&args.source),
+            temp: directory.join(&args.temp),
+            expected: directory.join(&args.expected),
             cmd: cmd,
-            quiet: quiet,
-            ignore: ignore,
+            quiet: !args.verbose,
+            ignore: args.ignore,
+            clean_failed: args.clean_failed,
         }
     }
 
@@ -77,6 +72,9 @@ impl Test {
             fs::remove_dir_all(&self.temp)?;
             Ok(TestResult::Success)
         } else {
+            if self.clean_failed {
+                fs::remove_dir_all(&self.temp)?;
+            }
             Ok(TestResult::Fail)
         }
     }

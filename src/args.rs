@@ -1,6 +1,44 @@
 use clap;
 
-pub fn get_args() -> clap::ArgMatches<'static> {
+pub struct Arguments {
+    pub quiet: bool,
+    pub test_dir: String,
+    pub source: String,
+    pub temp: String,
+    pub expected: String,
+    pub command: String,
+    pub verbose: bool,
+    pub ignore: bool,
+    pub clean_failed: bool,
+}
+
+pub fn get_args() -> Arguments {
+    let args = get_matches();
+
+    let quiet = args.occurrences_of("quiet") > 0;
+    let test_dir = args.value_of("directory").unwrap();
+    let source = args.value_of("source").unwrap();
+    let temp = args.value_of("temp").unwrap();
+    let expected = args.value_of("expected").unwrap();
+    let command = args.value_of("command").unwrap();
+    let verbose = args.occurrences_of("verbose") > 0;
+    let ignore = args.occurrences_of("ignore") == 0;
+    let clean_failed = args.occurrences_of("clean_failed") > 0;
+
+    Arguments {
+        quiet: quiet,
+        test_dir: test_dir.into(),
+        source: source.into(),
+        temp: temp.into(),
+        expected: expected.into(),
+        command: command.into(),
+        verbose: verbose,
+        ignore: ignore,
+        clean_failed: clean_failed,
+    }
+}
+
+fn get_matches() -> clap::ArgMatches<'static> {
     clap::App::new("Bintest")
         .version(crate_version!())
         .author(crate_authors!())
@@ -53,5 +91,10 @@ pub fn get_args() -> clap::ArgMatches<'static> {
                  .short("i")
                  .long("ignore")
                  .help("Don't ignore tests starting with ignore"))
+        .arg(clap::Arg::with_name("clean_failed")
+                 .short("f")
+                 .long("clean-failed")
+                 .help("By default, bintest will leave the temporary folder for failed/errored \
+                       tests. This will make it clean up the temporary folder if the test failed."))
         .get_matches()
 }
