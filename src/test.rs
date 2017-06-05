@@ -106,12 +106,9 @@ impl From<Result<TestResult, io::Error>> for TestResult {
     fn from(other: Result<TestResult, io::Error>) -> TestResult {
         match other {
             Ok(result) => result,
-            Err(err) => TestResult::Error(Some(err))
+            Err(err) => TestResult::Error(Some(err)),
         }
     }
-}
-
-impl ::std::cmp::Eq for TestResult {
 }
 
 impl ::std::cmp::PartialEq for TestResult {
@@ -126,13 +123,16 @@ impl ::std::cmp::PartialEq for TestResult {
     }
 }
 
+impl ::std::cmp::Eq for TestResult {}
+
 impl ::std::hash::Hash for TestResult {
     fn hash<H: ::std::hash::Hasher>(&self, state: &mut H) {
         match *self {
-            TestResult::Success => 1,
-            TestResult::Fail => 2,
-            TestResult::Ignored => 3,
-            TestResult::Error(_) => 4,
-        }.hash(state);
+                TestResult::Success => 1,
+                TestResult::Fail => 2,
+                TestResult::Ignored => 3,
+                TestResult::Error(_) => 4,
+            }
+            .hash(state);
     }
 }

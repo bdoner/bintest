@@ -52,15 +52,12 @@ impl Display for Results {
 
         fmter
             .write_str(&format!("Success: {}, Fail: {}, Error: {}, Ignored: {}\n",
-                               success.len(), fail.len(), error.len(), ignored.len()))?;
-        Results::print_elements(fmter,
-                                fail,
-                                "Failed",
-                                Red.normal())?;
-        Results::print_elements(fmter,
-                                error,
-                                "Error",
-                                Yellow.normal())?;
+                               success.len(),
+                               fail.len(),
+                               error.len(),
+                               ignored.len()))?;
+        Results::print_elements(fmter, fail, "Failed", Red.normal())?;
+        Results::print_elements(fmter, error, "Error", Yellow.normal())?;
         Ok(())
     }
 }
